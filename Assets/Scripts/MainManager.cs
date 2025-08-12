@@ -1,11 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.Serialization.Formatters;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class MainManager : MonoBehaviour
 {
+    public static MainManager Instance;
     public Brick BrickPrefab;
     public int LineCount = 6;
     public Rigidbody Ball;
@@ -18,14 +20,46 @@ public class MainManager : MonoBehaviour
     
     private bool m_GameOver = false;
 
+
+
+    private void Awake()
+    {
+        if (Instance != null)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
     
-    // Start is called before the first frame update
-    void Start()
+
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // Make sure this only runs in your target scene
+        if (scene.buildIndex == 1) // or check scene.name == "SceneName"
+        {
+            SpawnBricks();
+        }
+    }
+
+    void SpawnBricks()
     {
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
-        
-        int[] pointCountArray = new [] {1,1,2,2,5,5};
+
+        int[] pointCountArray = new[] { 1, 1, 2, 2, 5, 5 };
         for (int i = 0; i < LineCount; ++i)
         {
             for (int x = 0; x < perLine; ++x)
@@ -35,6 +69,11 @@ public class MainManager : MonoBehaviour
                 brick.PointValue = pointCountArray[i];
                 brick.onDestroyed.AddListener(AddPoint);
             }
+        }
+        
+        foreach (GameObject obj in SceneManager.GetActiveScene().GetRootGameObjects())
+        {
+            Debug.Log(obj.name);
         }
     }
 
@@ -57,6 +96,7 @@ public class MainManager : MonoBehaviour
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {
+                GameOverText.SetActive(false);
                 SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
             }
         }
