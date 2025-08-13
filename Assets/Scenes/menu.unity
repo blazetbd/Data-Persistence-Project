@@ -236,7 +236,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 526e8c1b7b12e4749bd1e96396d60539, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  nameField: {fileID: 0}
+  nameField: {fileID: 851364663}
 --- !u!1 &202477220
 GameObject:
   m_ObjectHideFlags: 0
@@ -1330,7 +1330,9 @@ MonoBehaviour:
   LineCount: 6
   Ball: {fileID: 0}
   ScoreText: {fileID: 0}
+  bestScoreText: {fileID: 0}
   GameOverText: {fileID: 0}
+  playerName: 
 --- !u!4 &1867751196
 Transform:
   m_ObjectHideFlags: 0

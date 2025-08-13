@@ -1,6 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.Serialization.Formatters;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -13,14 +13,18 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text bestScoreText;
     public GameObject GameOverText;
-    
+    public int bestScore;
+
+
+    public string playerName;
+    public string bestName;
+
+
     private bool m_Started = false;
     private int m_Points;
-    
     private bool m_GameOver = false;
-
-
 
     private void Awake()
     {
@@ -33,7 +37,6 @@ public class MainManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
-    
 
     private void OnEnable()
     {
@@ -45,16 +48,38 @@ public class MainManager : MonoBehaviour
         SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
-     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    public void StartOver()
     {
-        // Make sure this only runs in your target scene
-        if (scene.buildIndex == 1) // or check scene.name == "SceneName"
+        m_Points = 0;
+        string currentSceneName = SceneManager.GetActiveScene().name;
+        SceneManager.LoadScene(currentSceneName);
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // Only run in the gameplay scene (scene index 1)
+        if (scene.buildIndex == 1)
         {
+            LoadScore();
+            AssignReferences();
             SpawnBricks();
         }
     }
 
-    void SpawnBricks()
+    private void AssignReferences()
+    {
+        bestScoreText = GameObject.Find("ScoreText (1)").GetComponent<Text>();
+        Ball = GameObject.Find("Ball").GetComponent<Rigidbody>();
+        ScoreText = GameObject.Find("ScoreText").GetComponent<Text>();
+        GameOverText = GameObject.Find("GameoverText");
+
+        bestScoreText.text = "Best Score : " + bestName + " : " + bestScore;
+
+        if (GameOverText != null)
+            GameOverText.SetActive(false);
+    }
+
+    private void SpawnBricks()
     {
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
@@ -70,11 +95,6 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
-        
-        foreach (GameObject obj in SceneManager.GetActiveScene().GetRootGameObjects())
-        {
-            Debug.Log(obj.name);
-        }
     }
 
     private void Update()
@@ -85,8 +105,7 @@ public class MainManager : MonoBehaviour
             {
                 m_Started = true;
                 float randomDirection = Random.Range(-1.0f, 1.0f);
-                Vector3 forceDir = new Vector3(randomDirection, 1, 0);
-                forceDir.Normalize();
+                Vector3 forceDir = new Vector3(randomDirection, 1, 0).normalized;
 
                 Ball.transform.SetParent(null);
                 Ball.AddForce(forceDir * 2.0f, ForceMode.VelocityChange);
@@ -96,21 +115,63 @@ public class MainManager : MonoBehaviour
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                GameOverText.SetActive(false);
-                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+                m_Started = false;
+                m_GameOver = false;
+                if (GameOverText != null) GameOverText.SetActive(false);
+                StartOver();
             }
         }
     }
 
-    void AddPoint(int point)
+    private void AddPoint(int point)
     {
         m_Points += point;
         ScoreText.text = $"Score : {m_Points}";
+        if (m_Points > bestScore)
+        {
+            bestScore = m_Points;
+            bestName = playerName;
+            SaveScore();
+            bestScoreText.text = "Best Score : " + bestName + " : " + bestScore;
+        }
     }
 
     public void GameOver()
     {
         m_GameOver = true;
-        GameOverText.SetActive(true);
+        if (GameOverText != null) GameOverText.SetActive(true);
     }
+
+    [System.Serializable]
+    class SaveData
+    {
+        public int bestScore;
+        public string bestName;
+    }
+
+    public void SaveScore()
+    {
+        SaveData data = new SaveData();
+        data.bestScore = bestScore;
+        data.bestName = playerName;
+
+        string json = JsonUtility.ToJson(data);
+
+        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
+    }
+
+    public void LoadScore()
+    {
+        string path = Application.persistentDataPath + "/savefile.json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+
+            bestScore = data.bestScore;
+            bestName = data.bestName;
+        }
+    }
+
+    
 }
